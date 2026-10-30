@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Desain 3D Kamar Kost 250 × 300 cm</title>
+    <style>
+        :root {
+            --bg: #eef0f3;
+            --fg: #1d2430;
+            --card: #ffffff;
+            --line: #cfd5dd;
+            --acc: #0f766e;
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px)
+        }
+
+        @media (prefers-color-scheme:dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #171b22;
+                --fg: #e8ecf2;
+                --card: #232933;
+                --line: #37404d;
+                --acc: #2dd4bf
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #171b22;
+            --fg: #e8ecf2;
+            --card: #232933;
+            --line: #37404d;
+            --acc: #2dd4bf
+        }
+
+        html {
+            scroll-padding-top: env(safe-area-inset-top, 0px)
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100%
+        }
+
+        header {
+            padding: 10px 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            border-bottom: 1px solid var(--line);
+            background: var(--card)
+        }
+
+        h1 {
+            font-size: 15px;
+            margin: 0 8px 0 0
+        }
+
+        button,
+        label {
+            font: inherit;
+            color: var(--fg)
+        }
+
+        button {
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 5px 11px;
+            cursor: pointer
+        }
+
+        button:hover {
+            border-color: var(--acc)
+        }
+
+        #v {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            touch-action: none
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%
+        }
+
+        #info {
+            position: absolute;
+            left: 10px;
+            bottom: 10px;
+            right: 10px;
+            max-width: 430px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 12px;
+            opacity: .95
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Kamar Kost 250 × 300 cm</h1>
+        <button data-v="p">Perspektif</button><button data-v="t">Atas</button><button data-v="f">Depan</button><button
+            data-v="l">Kiri</button>
+        <label><input type="checkbox" id="roof"> Tampilkan atap</label>
+    </header>
+    <div id="v">
+        <div id="info">Seret = putar · scroll/cubit = zoom. Dinding yang menghadap kamera otomatis transparan.<br>Tinggi
+            ruang 3 m · pintu 2 m · mezanin 200×110 cm (lantai atas di 2,1 m) · dapur 50×100 cm menghadap KM · KM
+            110×100 cm (pintu di depan dapur).</div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        const V = document.getElementById('v'), H = 3;
+        const scene = new THREE.Scene();
+        const cs = () => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#eef0f3';
+        scene.background = new THREE.Color(cs());
+        matchMedia('(prefers-color-scheme:dark)').addEventListener('change', () => setTimeout(() => scene.background = new THREE.Color(cs()), 50));
+        const cam = new THREE.PerspectiveCamera(45, 1, .05, 50);
+        const R = new THREE.WebGLRenderer({ antialias: true }); R.setPixelRatio(Math.min(devicePixelRatio, 2)); V.appendChild(R.domElement);
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f99, .85));
+        const dl = new THREE.DirectionalLight(0xffffff, .6); dl.position.set(-3, 6, 5); scene.add(dl);
+        const pl = new THREE.PointLight(0xfff1d6, .5, 6); pl.position.set(1.25, 2.6, 1.5); scene.add(pl);
+        const M = c => new THREE.MeshStandardMaterial({ color: c, roughness: .75 });
+        const glass = new THREE.MeshStandardMaterial({ color: 0x9ad0f0, transparent: true, opacity: .3 });
+        function B(x0, x1, y0, y1, z0, z1, m) { if (x1 - x0 < 1e-4 || y1 - y0 < 1e-4 || z1 - z0 < 1e-4) return; const o = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m); o.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); scene.add(o); return o }
+        const wm = {};['top', 'bottom', 'left', 'right'].forEach(k => wm[k] = new THREE.MeshStandardMaterial({ color: 0xf3f0ea, roughness: .9, transparent: true }));
+        const NR = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] };
+        function wall(k, ax, t0, t1, a0, a1, h0, h1, y0, y1) { const m = wm[k];[[a0, h0, 0, H], [h1, a1, 0, H], [h0, h1, 0, y0], [h0, h1, y1, H]].forEach(p => ax == 'x' ? B(t0, t1, p[2], p[3], p[0], p[1], m) : B(p[0], p[1], p[2], p[3], t0, t1, m)) }
+        // lantai
+        B(0, 2.5, -.05, 0, 0, 3, M(0xc79a6b)); B(1.45, 2.5, 0, .01, 2.08, 3, M(0xaec6cf));
+        // dinding luar (pintu masuk x 0–0.9 m, tinggi 2 m)
+        wall('top', 'z', -.08, 0, -.08, 2.58, 0, .9, 0, 2);
+        wall('bottom', 'z', 3, 3.08, -.08, 2.58, .8, 1.3, 1.2, 1.9);
+        wall('left', 'x', -.08, 0, 0, 3, 1, 1.8, 1, 2);
+        wall('right', 'x', 2.5, 2.58, 0, 3, .4, 1.1, .9, 1.9);
+        B(.8, 1.3, 1.2, 1.9, 3.02, 3.06, glass); B(-.06, -.02, 1, 2, 1, 1.8, glass); B(2.52, 2.56, .9, 1.9, .4, 1.1, glass);
+        // kamar mandi 110×100 (pintu di dinding kiri, menghadap dapur, tinggi 2 m)
+        wall('bottom', 'z', 2, 2.08, 1.4, 2.5, 1.4, 1.4, 0, 0);
+        wall('left', 'x', 1.4, 1.45, 2, 3, 2.1, 2.7, 0, 1.9);
+        // pintu
+        function door(x, z, len, rot, c) { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; const l = new THREE.Mesh(new THREE.BoxGeometry(len, 2, .04), M(c)); l.position.set(len / 2, 1, 0); g.add(l); scene.add(g) }
+        door(0, -.02, .9, -1.1, 0x8b5a2b); { const g = new THREE.Group(); g.position.set(1.4, 0, 2.1); g.rotation.y = 1; const l = new THREE.Mesh(new THREE.BoxGeometry(.04, 1.9, .6), M(0xd9d4c8)); l.position.set(0, .95, .3); g.add(l); scene.add(g) }
+        // mezanin 200×110: x 1.4–2.5, z 0–2.0, alas atas 2,1 m
+        const wood = M(0xb98a5a);
+        B(1.4, 2.5, 2, 2.1, 0, 2, wood);
+        [[1.43, .04], [1.43, 1.96]].forEach(p => B(p[0] - .03, p[0] + .03, 0, 2, p[1] - .03, p[1] + .03, M(0x6b4a2b)));
+        B(1.5, 2.4, 2.1, 2.25, .08, 1.98, M(0x4f7fb8)); B(1.5, 2.4, 2.25, 2.31, 1.6, 1.92, M(0xf5f5f5)); // kasur & bantal
+        [.6, 1.3, 1.95].forEach(z => B(1.4, 1.43, 2.1, 2.6, z - .03, z, M(0x6b4a2b)));
+        B(1.4, 1.43, 2.58, 2.62, .6, 2, M(0x6b4a2b));
+        // tangga ke mezanin (z 0,06–0,56, merapat ke dinding atas dekat pintu masuk)
+        const lm = M(0x6b4a2b);
+        [.06, .56].forEach(z => { const r = new THREE.Mesh(new THREE.BoxGeometry(.04, 2.1, .04), lm); r.position.set(1.36, 1.05, z); scene.add(r) });
+        for (let i = 1; i <= 8; i++) { const y = i * .25, x = 1.36; B(x - .02, x + .02, y - .02, y + .02, .06, .56, lm) }
+        // area kerja di bawah mezanin
+        B(1.5, 2.5, .72, .75, 1.5, 2, M(0xd8c3a0));[[1.52, 1.52], [1.52, 1.98], [2.48, 1.52], [2.48, 1.98]].forEach(p => B(p[0] - .02, p[0] + .02, 0, .72, p[1] - .02, p[1] + .02, M(0x555555)));
+        B(1.85, 2.15, .42, .46, 1.1, 1.4, M(0x333333)); B(1.85, 2.15, .42, .9, 1.1, 1.13, M(0x333333));
+        B(1.95, 2.05, .75, .76, 1.78, 1.9, M(0x222222)); B(1.99, 2.01, .76, .9, 1.84, 1.86, M(0x222222)); B(1.72, 2.28, .88, 1.16, 1.84, 1.88, M(0x111111)); B(1.74, 2.26, .9, 1.14, 1.835, 1.84, new THREE.MeshBasicMaterial({ color: 0x3b82c4 })); B(1.9, 2.1, .75, .765, 1.6, 1.7, M(0x222222));
+        B(1.45, 2.45, 0, 1.9, .05, .55, M(0xd9c7a8)); // lemari di belakang tangga
+        // dapur mini 50×100 di dinding kiri, menghadap KM
+        B(0, .5, 0, .85, 2, 3, M(0xf5f5f5)); B(0, .5, .85, .88, 2, 3, M(0x4a4f57));
+        B(.08, .42, .86, .9, 2.08, 2.5, M(0xb9c2cc)); const fc = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .2), M(0x999999)); fc.position.set(.06, .98, 2.3); scene.add(fc);
+        [2.68, 2.88].forEach(z => { const b = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .02, 24), M(0x111111)); b.position.set(.27, .9, z); scene.add(b) });
+        B(0, .3, 1.5, 2, 2.05, 2.95, M(0xe9e3d6));
+        // kamar mandi isi
+        const tl = new THREE.Mesh(new THREE.CylinderGeometry(.19, .16, .4, 20), M(0xffffff)); tl.position.set(2.2, .2, 2.32); scene.add(tl); B(2.05, 2.35, .3, .8, 2.08, 2.18, M(0xffffff));
+        B(2.1, 2.5, 0, .05, 2.55, 3, M(0x9fb7c2)); B(2.46, 2.5, 1.9, 1.94, 2.76, 2.8, M(0x888888)); B(2.4, 2.5, 1.9, 1.94, 2.76, 2.8, M(0x888888));
+        const sh = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, .02, 16), M(0xaaaaaa)); sh.position.set(2.38, 1.9, 2.78); scene.add(sh);
+        B(1.5, 1.9, .8, .86, 2.78, 3, M(0xffffff));
+        const ceil = B(-.08, 2.58, 3, 3.05, -.08, 3.08, M(0xffffff)); ceil.visible = false;
+        document.getElementById('roof').onchange = e => ceil.visible = e.target.checked;
+        // label
+        function lab(t, x, y, z) { const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d'); g.fillStyle = 'rgba(15,118,110,.9)'; g.fillRect(0, 0, 256, 64); g.fillStyle = '#fff'; g.font = 'bold 28px sans-serif'; g.textAlign = 'center'; g.fillText(t, 128, 42); const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false })); s.position.set(x, y, z); s.scale.set(.7, .175, 1); scene.add(s) }
+        lab('MEZANIN', 1.95, 2.75, 1); lab('DAPUR', .25, 2.2, 2.5); lab('KM', 2, 2.3, 2.6); lab('KERJA', 2, 1.3, 1.75); lab('PINTU', .45, 2.2, 0); lab('TANGGA', 1.2, 2.3, .3); lab('LEMARI', 1.95, 1.5, .3);
+        // kamera orbit
+        const T = new THREE.Vector3(1.25, 1.2, 1.5); let az = -.6, el = .55, r = 7.5;
+        const P = { p: [-.6, .55, 7.5], t: [0, 1.5, 6.5], f: [3.14, .1, 7.5], l: [-1.57, .1, 7.5] };
+        document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { [az, el, r] = P[b.dataset.v] });
+        function upd() {
+            cam.position.set(T.x + r * Math.cos(el) * Math.sin(az), T.y + r * Math.sin(el), T.z + r * Math.cos(el) * Math.cos(az)); cam.lookAt(T);
+            const d = cam.position.clone().sub(T).normalize(); for (const k in wm) { const n = NR[k], dd = d.x * n[0] + d.z * n[1]; wm[k].opacity = dd > .3 ? .1 : 1; wm[k].depthWrite = dd <= .3 }
+        }
+        let drag = null; const pts = new Map(); let pd = 0;
+        R.domElement.addEventListener('pointerdown', e => { pts.set(e.pointerId, e); R.domElement.setPointerCapture(e.pointerId); drag = [e.clientX, e.clientY] });
+        R.domElement.addEventListener('pointermove', e => {
+            if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, e);
+            if (pts.size == 2) { const a = [...pts.values()], d = Math.hypot(a[0].clientX - a[1].clientX, a[0].clientY - a[1].clientY); if (pd) r = Math.min(14, Math.max(2.5, r * pd / d)); pd = d; return }
+            az -= (e.clientX - drag[0]) * .008; el = Math.min(1.5, Math.max(.02, el + (e.clientY - drag[1]) * .008)); drag = [e.clientX, e.clientY]
+        });
+        const up = e => { pts.delete(e.pointerId); pd = 0; const a = [...pts.values()][0]; if (a) drag = [a.clientX, a.clientY] };
+        R.domElement.addEventListener('pointerup', up); R.domElement.addEventListener('pointercancel', up);
+        R.domElement.addEventListener('wheel', e => { e.preventDefault(); r = Math.min(14, Math.max(2.5, r * (1 + e.deltaY * .001))) }, { passive: false });
+        function rs() { const w = V.clientWidth, h = V.clientHeight; R.setSize(w, h); cam.aspect = w / h; cam.updateProjectionMatrix() }
+        new ResizeObserver(rs).observe(V); rs();
+        (function loop() { upd(); R.render(scene, cam); requestAnimationFrame(loop) })();
+    </script>
+</body>
+
+</html>
